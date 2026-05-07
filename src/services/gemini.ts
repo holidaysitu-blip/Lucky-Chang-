@@ -41,10 +41,27 @@ Create an image where the same Lucky Chang mascot appears in this theme. Return 
 `;
 }
 
+function fallbackLuckyChang(style: ChangStyle, prompt?: string): Partial<LuckyChang> {
+  const theme = prompt?.trim() || STYLE_GUIDES[style];
+
+  return {
+    name: "主题小吉象",
+    traits: ["主体不变", "主题延展", "好运陪伴"],
+    description: `以原始 Lucky Chang 小黄象为本体，预览主题：${theme}。正式配置 GEMINI_API_KEY 后会生成对应主题图片。`,
+    style,
+    image: LUCKY_CHANG_SOURCE_IMAGE,
+    level: 1,
+    stats: { happiness: 100, energy: 100, social: 100 },
+  };
+}
+
 export async function generateLuckyChang(style: ChangStyle, prompt?: string): Promise<Partial<LuckyChang>> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey =
+    import.meta.env.VITE_GEMINI_API_KEY ||
+    import.meta.env.GEMINI_API_KEY;
+
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not defined in the environment.");
+    return fallbackLuckyChang(style, prompt);
   }
 
   const ai = new GoogleGenAI({ apiKey });

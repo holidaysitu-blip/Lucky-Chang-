@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ChangStyle, LuckyChang } from "../types";
 
-export const LUCKY_CHANG_SOURCE_IMAGE = "/lucky-chang.jpg";
+export const LUCKY_CHANG_SOURCE_IMAGE = `${import.meta.env.BASE_URL}lucky-chang.jpg`;
 
 const STYLE_GUIDES: Record<ChangStyle, string> = {
   pixel: "retro 8-bit pixel art theme, blocky background and pixel props",

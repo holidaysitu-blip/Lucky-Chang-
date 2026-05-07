@@ -1,20 +1,30 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Lucky Chang
 
-# Run and deploy your AI Studio app
+Lucky Chang is an AI themed-image app for the fixed Lucky Chang mascot.
 
-This contains everything you need to run your app locally.
+The source mascot image is stored at:
 
-View your app in AI Studio: https://ai.studio/apps/7913e138-9580-42fc-8a3f-7437b85d1a73
+- `public/lucky-chang.jpg`
+
+Generation behavior:
+
+- Use the provided Lucky Chang image as the fixed subject.
+- Keep the yellow elephant body, large ears, round eyes, trunk, white tusks, white belly, and raised-hand friendly pose.
+- Change only the theme, background, clothing accessories, props, lighting, and scene mood.
+- Do not redesign the mascot or turn it into another character.
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
-
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+
+   ```bash
+   npm install
+   ```
+
+2. Set `GEMINI_API_KEY` in `.env.local`.
+
 3. Run the app:
-   `npm run dev`
+
+   ```bash
+   npm run dev
+   ```

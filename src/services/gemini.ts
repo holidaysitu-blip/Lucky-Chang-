@@ -1,14 +1,44 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ChangStyle, LuckyChang } from "../types";
 
-const MASCOT_URL = "https://api.dicebear.com/7.x/notionists/svg?seed=LuckyElephant";
+export const LUCKY_CHANG_SOURCE_IMAGE = "/lucky-chang.jpg";
 
-async function getBase64FromUrl(url: string): Promise<{ data: string, mimeType: string }> {
+const STYLE_GUIDES: Record<ChangStyle, string> = {
+  pixel: "retro 8-bit pixel art theme, blocky background and pixel props",
+  normal: "clean cute commercial cartoon illustration theme",
+  movie: "cinematic poster theme with dramatic lighting and film-like scene",
+  variant: "surreal fantasy theme while the mascot body stays unchanged",
+  artbox: "designer toy and collectible packaging theme",
+  diy: "custom user-requested theme",
+};
+
+async function getBase64FromUrl(url: string): Promise<{ data: string; mimeType: string }> {
   const response = await fetch(url);
   const buffer = await response.arrayBuffer();
-  const data = Buffer.from(buffer).toString('base64');
-  const mimeType = response.headers.get('content-type') || 'image/png';
+  const data = Buffer.from(buffer).toString("base64");
+  const mimeType = response.headers.get("content-type") || "image/jpeg";
   return { data, mimeType };
+}
+
+function buildThemePrompt(style: ChangStyle, prompt?: string) {
+  const userTheme = prompt?.trim() || "a bright lucky theme";
+
+  return `
+Use the provided Lucky Chang image as the exact character identity reference.
+
+Core rule: keep the same mascot, not a redesign. The subject must remain the same yellow cartoon elephant from the reference image.
+
+Must preserve: yellow cartoon elephant body, large round ears, brown round eyes, small eyebrows, curved elephant trunk, white tusks, white belly, cute rounded proportions, friendly raised-hand greeting pose, warm lucky child-friendly feeling.
+
+Allowed to change only: background, scene, clothing accessories, small props, lighting, composition, and theme atmosphere.
+
+Do not change the species, body color, face structure, ears, trunk, tusks, white belly, or friendly pose. Do not create a different elephant character.
+
+Style direction: ${STYLE_GUIDES[style]}.
+Theme request: ${userTheme}.
+
+Create an image where the same Lucky Chang mascot appears in this theme. Return only the image.
+`;
 }
 
 export async function generateLuckyChang(style: ChangStyle, prompt?: string): Promise<Partial<LuckyChang>> {
@@ -18,35 +48,18 @@ export async function generateLuckyChang(style: ChangStyle, prompt?: string): Pr
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  
-  // 1. Generate Text Details
-  const textModel = "gemini-3-flash-preview";
-  const systemInstruction = `
-    You are an AI designer for "Lucky Chang", a collection of lucky elephant characters.
-    Generate a unique Lucky Chang character based on the requested style: ${style}.
-    Styles:
-    - pixel: Retro 8-bit aesthetic.
-    - normal: Cute, modern 3D/2D illustration.
-    - movie: Cinematic, detailed, inspired by famous films.
-    - variant: Strange, anomalous, cosmic, or surreal versions.
-    - artbox: Artistic, designer toy aesthetic, abstract patterns.
-    - diy: Custom style based on user prompt.
-    
-    CRITICAL: The generated character MUST be a "Little Lucky Elephant" (小吉象). 
-    CRITICAL: DO NOT include any humans, people, or human-like features in the image.
-    CRITICAL: DO NOT include any flowers, floral patterns, or plants in the image.
-    
-    If a prompt is provided, incorporate it: ${prompt || 'Surprise me!'}
-    
-    Return the character details in JSON format.
-  `;
+  const themePrompt = buildThemePrompt(style, prompt);
 
-  let textData: any = null;
+  let textData: Pick<LuckyChang, "name" | "traits" | "description">;
   try {
     const textResponse = await ai.models.generateContent({
-      model: textModel,
+      model: "gemini-3-flash-preview",
       config: {
-        systemInstruction,
+        systemInstruction: `
+You write short Chinese product copy for Lucky Chang, a fixed yellow cartoon elephant mascot.
+The image generation changes theme, scene, accessories, and background only. The mascot identity stays unchanged.
+Return JSON only.
+`,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -55,28 +68,35 @@ export async function generateLuckyChang(style: ChangStyle, prompt?: string): Pr
             traits: { type: Type.ARRAY, items: { type: Type.STRING } },
             description: { type: Type.STRING },
           },
-          required: ["name", "traits", "description"]
-        }
+          required: ["name", "traits", "description"],
+        },
       },
-      contents: [{ role: 'user', parts: [{ text: "Generate a new Lucky Chang character." }] }]
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Style: ${style}. Theme: ${prompt || "surprise me"}. Keep Lucky Chang as the same mascot.`,
+            },
+          ],
+        },
+      ],
     });
     textData = JSON.parse(textResponse.text);
   } catch (error) {
     console.error("Text generation failed:", error);
     textData = {
-      name: "神秘小吉象",
-      traits: ["神秘", "未知"],
-      description: "一只在时空裂缝中诞生的神秘小吉象。"
+      name: "主题小吉象",
+      traits: ["主体不变", "主题延展", "好运陪伴"],
+      description: "以原始 Lucky Chang 小黄象为本体，只改变主题场景、道具和氛围。",
     };
   }
 
-  // 2. Generate Image
-  const imageModel = "gemini-2.5-flash-image";
-  let imageUrl = "";
+  let imageUrl = LUCKY_CHANG_SOURCE_IMAGE;
   try {
-    const mascotImg = await getBase64FromUrl(MASCOT_URL);
+    const mascotImg = await getBase64FromUrl(LUCKY_CHANG_SOURCE_IMAGE);
     const imageResponse = await ai.models.generateContent({
-      model: imageModel,
+      model: "gemini-2.5-flash-image",
       contents: {
         parts: [
           {
@@ -85,18 +105,12 @@ export async function generateLuckyChang(style: ChangStyle, prompt?: string): Pr
               mimeType: mascotImg.mimeType,
             },
           },
-          {
-            text: `Generate a new Lucky Chang character image based on this mascot image. 
-                   Style: ${style}. 
-                   The new character should be a variation of the mascot but strictly in the requested style.
-                   ${prompt ? `Incorporate these elements: ${prompt}` : ''}
-                   Return only the image.`,
-          },
+          { text: themePrompt },
         ],
       },
     });
 
-    for (const part of imageResponse.candidates[0].content.parts) {
+    for (const part of imageResponse.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) {
         imageUrl = `data:image/png;base64,${part.inlineData.data}`;
         break;
@@ -104,16 +118,7 @@ export async function generateLuckyChang(style: ChangStyle, prompt?: string): Pr
     }
   } catch (error) {
     console.error("Image generation failed:", error);
-    // Fallback to style-based placeholders if generation fails
-    const styleImages: Record<ChangStyle, string> = {
-      pixel: MASCOT_URL,
-      normal: MASCOT_URL,
-      movie: MASCOT_URL,
-      variant: MASCOT_URL,
-      artbox: MASCOT_URL,
-      diy: MASCOT_URL
-    };
-    imageUrl = styleImages[style];
+    imageUrl = LUCKY_CHANG_SOURCE_IMAGE;
   }
 
   return {
@@ -121,6 +126,6 @@ export async function generateLuckyChang(style: ChangStyle, prompt?: string): Pr
     style,
     image: imageUrl,
     level: 1,
-    stats: { happiness: 100, energy: 100, social: 100 }
+    stats: { happiness: 100, energy: 100, social: 100 },
   };
 }

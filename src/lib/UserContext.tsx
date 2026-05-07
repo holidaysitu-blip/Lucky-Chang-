@@ -15,11 +15,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem('lucky_chang_user');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Force update avatar if it's the old one
-      if (parsed.avatar.includes('ADBb0uiBBnb4wbrqmnglxeN-f6O_65Er9BflnuxOu2PZkyPvga6uSU3aMqpyupEbpw0VDN4anMEAAz9Eu6UYkvV6fZbU4ozKqkTGdv3qpqzLdQ0beDYRCA7KPuNYI4-eTQtlPVOKQWTYK2sYAmViDN2vPCcJWDP0E2DKMZLcON4A6HUZQAYObrjBV2R0zs_IZIsRNUX43_hlDak3L25cGcTHdShHJ7JL0qNXw4QFDr3_ftR8c5zLor1-p1MY0uUgvFyT_GQtJMJbnqq7Cg')) {
+      if (!parsed.avatar || parsed.avatar.includes('dicebear.com')) {
         parsed.avatar = INITIAL_USER.avatar;
       }
-      // Ensure DIY is in generationCount
+      if (!parsed.collection?.some((chang: LuckyChang) => chang.id === 'lc_source')) {
+        parsed.collection = [INITIAL_USER.collection[0], ...(parsed.collection || [])];
+      }
       if (!parsed.generationCount.diy) {
         parsed.generationCount.diy = 0;
       }
